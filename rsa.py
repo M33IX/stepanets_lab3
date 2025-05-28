@@ -11,6 +11,9 @@ class RSASignature:
     def __init__(self, signature: int):
         self.signature = signature
 
+    def __repr__(self) -> str:
+        return f"RSA Signature: {self.signature}"
+
 def is_prime(n: int, k: int = 5) -> bool:
     """Проверка числа на простоту с использованием теста Миллера-Рабина."""
     if n <= 1:
