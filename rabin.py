@@ -110,39 +110,60 @@ def encrypt(m: int, n: int) -> int:
     Возвращает:
         Зашифрованное сообщение.
     """
-    return pow(m, 2, n)
+    m_labeled = add_label(m)
+    if m_labeled >= n:
+        raise ValueError("Сообщение слишком большое после добавления метки")
+    return pow(m_labeled, 2, n)
 
-def decrypt(c: int, private_key: tuple[int, int, int, int, int]) -> list[int]:
+def decrypt(c: int, private_key: tuple[int, int, int, int, int]) -> int:
     """
     Дешифрование сообщения с помощью закрытого ключа.
     Параметры:
         c: Шифротекст.
         private_key: Закрытый ключ (p, q, a, b, n).
     Возвращает:
-        Список из 4 возможных исходных сообщений.
+        Расшифрованное сообщение
     """
     p, q, a, b, n = private_key
-    # Вычисление корней по модулям p и q
+    # Вычисляем квадратные корни по модулям p и q
     r = pow(c, (p + 1) // 4, p)
     s = pow(c, (q + 1) // 4, q)
-    # Комбинирование корней
-    x = (a * p * s + b * q * r) % n
-    y = (a * p * s - b * q * r) % n
-    # Формирование всех четырех корней
-    return [x % n, (-x) % n, y % n, (-y) % n]
+    # Комбинируем результаты с помощью китайской теоремы об остатках
+    x1 = (a * p * s + b * q * r) % n
+    x2 = n - x1
+    x3 = (a * p * s - b * q * r) % n
+    x4 = n - x3
+    candidates = [x1, x2, x3, x4]
+    # Проверяем кандидатов на наличие правильной метки
+    valid_messages = []
+    for candidate in candidates:
+        original = remove_label(candidate)
+        if original is not None:
+            valid_messages.append(original)
+    # Если нашли ровно одно сообщение с правильной меткой
+    if len(valid_messages) == 1:
+        return valid_messages[0]
+    # Обработка ошибок
+    elif len(valid_messages) > 1:
+        raise ValueError(f"Обнаружено несколько сообщений с верной меткой: {valid_messages}")
+    else:
+        raise ValueError("Не найдено ни одного сообщения с правильной меткой")
 
 # Пример использования
 if __name__ == "__main__":
     # Генерация ключей
     private_key, public_key = generate_keys(bit_length=512)
-    print(f"Открытый ключ (n): {public_key}")
-    print(f"Закрытый ключ (p, q, a, b, n): {private_key}")
+    # print(f"Открытый ключ (n): {public_key}")
+    # print(f"Закрытый ключ (p, q, a, b, n): {private_key}")
 
     # Шифрование и дешифрование
-    message = 123456789  # Пример сообщения
+    message = 123456789234783848738743874  # Пример сообщения
+    print(f"Исходное сообщение {message}")
+
     ciphertext = encrypt(message, public_key)
     print(f"Шифротекст: {ciphertext}")
 
-    decrypted_messages = decrypt(ciphertext, private_key)
-    print(f"Возможные исходные сообщения: {decrypted_messages}")
-    print(f"Исходное сообщение присутствует в списке: {message in decrypted_messages}")
+    decrypted_message = decrypt(ciphertext, private_key)
+    print(f"Расшифрованное сообщение: {decrypted_message}")
+
+    assert message == decrypted_message
